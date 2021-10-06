@@ -111,9 +111,9 @@ def follow_index(request):
     post_list = Post.objects.filter(author_id__in=following).all()
     paginator = Paginator(post_list, PST_ON_PAGE)
     page_number = request.GET.get('page')
-    page = paginator.get_page(page_number)
+    page_obj = paginator.get_page(page_number)
     context = {
-        'page': page,
+        'page_obj': page_obj,
         'paginator': paginator,
     }
     return render(request, 'posts/follow.html', context)

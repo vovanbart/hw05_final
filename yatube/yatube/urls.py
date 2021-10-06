@@ -19,6 +19,8 @@ from django.urls import path, include
 from django.contrib import admin
 
 handler404 = 'core.views.page_not_found'
+handler500 = 'core.views.server_error'
+handler403 = 'core.views.csrf_failure'
 
 urlpatterns = [
     path("", include("posts.urls")),
