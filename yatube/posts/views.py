@@ -40,13 +40,14 @@ def profile(request, username):
     paginator = Paginator(post_list, PST_ON_PAGE)
     page_num = request.GET.get('page')
     page_obj = paginator.get_page(page_num)
-    following = Follow.objects.filter(author=author, user=request.user).exists()
+    following = Follow.objects.filter(author=author,
+                                      user=request.user).exists()
     context = {
         'post_count': post_count,
         'paginator': paginator,
         'author': author,
         'page_obj': page_obj,
-        'following': following, }        
+        'following': following, }
     return render(request, 'posts/profile.html', context)
 
 
@@ -112,24 +113,26 @@ def follow_index(request):
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
     context = {
-        'page': page, 
+        'page': page,
         'paginator': paginator,
     }
-    return render(request, 'posts/follow.html',context)
+    return render(request, 'posts/follow.html', context)
 
 
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    status_follow = Follow.objects.filter(user=request.user, author=author).exists()
+    status_follow = Follow.objects.filter(user=request.user,
+                                          author=author).exists()
     if status_follow or author == request.user:
         return redirect('posts:profile', username=request.user)
-    follow_object = Follow.objects.create(user=request.user, author=author)
+    Follow.objects.create(user=request.user, author=author)
     return redirect('posts:profile', username=request.user)
 
 
-@login_required 
+@login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    follow_object = Follow.objects.filter(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user,
+                          author=author).delete()
     return redirect('posts:profile_unfollow', username=request.user)
