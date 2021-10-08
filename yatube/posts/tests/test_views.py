@@ -135,3 +135,32 @@ class PaginatorViewsTest(TestCase):
         self.assertEqual(
             len(response.context.get('page_obj').object_list),
             self.POSTS_COUNT - self.POSTS_IN_PAGE)
+
+
+class FollowViewsTest(TestCase):
+    @classmethod
+    def setUpClass(self):
+        super().setUp(self)
+        self.client = Client()
+        self.user = User.objects.create(username='test_user')
+        self.client.force_login(self.user)
+        self.author1 = User.objects.create(username='test_author1')
+        self.author2 = User.objects.create(username='test_author2')
+
+    def test_follow(self):
+        User.objects.get(username=self.user.username)
+        author = User.objects.get(username=self.author1.username)
+        User.objects.get(username=self.author2.username)
+        Post.objects.create(text='test_post', author=author)
+        response = self.client.get('/follow/')
+        self.assertContains(response, 'test_post')
+
+    def test_auth_unauth_comment_post(self):
+        user = User.objects.get(username=self.user.username)
+        post = Post.objects.create(text='test_post', author=user)
+        self.client.post(
+            f'/testing2/{post.id}/',
+            {'text': 'comment'},
+            follow=True)
+        response = self.client.get(f'/testing2/{post.id}/')
+        self.assertContains(response, 'comment')

@@ -69,6 +69,6 @@ class GroupModelTest(TestCase):
 
     def test_models_have_correct_object_names_group(self):
         """Проверяем, что у модели Group корректно работает __str__."""
-        group = PostModelTest.group
+        group = self.group
         expected_object_name = group.title
         self.assertEqual(expected_object_name, str(group))

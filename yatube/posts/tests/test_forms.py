@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.forms import PostForm
-from posts.models import Group, Post
+from posts.forms import PostForm, CommentForm
+from posts.models import Group, Post, Comment
 
 User = get_user_model()
 
@@ -87,3 +87,26 @@ class PostFormTest(TestCase):
         self.assertEqual(id_post.text, post_data['text'])
         self.assertEqual(id_post.group.id,
                          post_data['group'])
+
+
+class CommentFormTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.form = CommentForm()
+        cls.user = User.objects.create_user(username='test_user')
+        cls.author = User.objects.create_user(username='test_author')
+        cls.post = Post.objects.create(
+            text='Test text',
+            author=cls.author,
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.user,
+            text='test-comment',
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+
