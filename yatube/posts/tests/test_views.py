@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from posts.models import Post, Group
+
+from posts.models import Group, Post, Comment
+
 User = get_user_model()
 
 
@@ -20,6 +22,11 @@ class PostPagesTests(TestCase):
             text='Тестовый текст',
             author=cls.user,
             group=cls.group
+        )
+        cls.comment = Comment.objects.create(
+            text='Тестовый комментарий',
+            author=cls.user,
+            post=cls.post
         )
 
     def setUp(self):
@@ -51,7 +58,12 @@ class PostPagesTests(TestCase):
     def test_index_list_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
-        self.check_context_contains_page(response.context)
+        response_text = response.context['page_obj'][0].text
+        response_author = response.context['page_obj'][0].author
+        response_group = response.context['page_obj'][0].group
+        self.assertEqual(response_text, 'Тестовый текст')
+        self.assertEqual(response_author.username, 'auth')
+        self.assertEqual(response_group.title, 'Тестовая группа')
 
     def test_post_on_the_home_page(self):
         """ Тест на появление поста на главной странице после создания """
@@ -100,12 +112,52 @@ class PostPagesTests(TestCase):
             ' Пост автора не отображается на странице автора '
         ))
 
-    def check_context_contains_page(self, context):
-        self.assertIn('page_obj', context)
-        post = context['page_obj'][0]
-        self.assertEqual(post.author, PostPagesTests.user)
-        self.assertEqual(post.text, 'Тестовый текст')
-        self.assertEqual(post.group.title, 'Тестовая группа')
+    def test_comment_authorized_user(self):
+        """ Оставлять комментарий может только авторизованный пользователь """
+        comment_count = Comment.objects.count()
+        '''comment = Comment.objects.create(
+            text='Тестовый comment',
+            author=self.user,
+            post = self.post,
+        )'''
+        form_data = {
+            'text': 'Тестовый comment',
+            'author': self.user,
+            'post': self.post
+        }
+        response = self.guest_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Comment.objects.count(), comment_count)
+
+    def test_comment_on_the_post_page(self):
+        form_data = {
+            'text': 'Тестовый comment',
+            'author': self.user,
+            'post': self.post
+        }
+        comment = Comment.objects.create(
+            text='Тестовый comment',
+            author=self.user,
+            post=self.post
+        )
+        response = self.authorized_client.get(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
+        self.assertRedirects(response, reverse('posts:post_detail',
+                                               kwargs={
+                                                   'post_id': self.post.id}))
+        response = self.authorized_client.get(
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(response.context['comments'][1].text, comment.text)
 
 
 class PaginatorViewsTest(TestCase):
@@ -135,32 +187,3 @@ class PaginatorViewsTest(TestCase):
         self.assertEqual(
             len(response.context.get('page_obj').object_list),
             self.POSTS_COUNT - self.POSTS_IN_PAGE)
-
-
-class FollowViewsTest(TestCase):
-    @classmethod
-    def setUpClass(self):
-        super().setUp(self)
-        self.client = Client()
-        self.user = User.objects.create(username='test_user')
-        self.client.force_login(self.user)
-        self.author1 = User.objects.create(username='test_author1')
-        self.author2 = User.objects.create(username='test_author2')
-
-    def test_follow(self):
-        User.objects.get(username=self.user.username)
-        author = User.objects.get(username=self.author1.username)
-        User.objects.get(username=self.author2.username)
-        Post.objects.create(text='test_post', author=author)
-        response = self.client.get('/follow/')
-        self.assertContains(response, 'test_post')
-
-    def test_auth_unauth_comment_post(self):
-        user = User.objects.get(username=self.user.username)
-        post = Post.objects.create(text='test_post', author=user)
-        self.client.post(
-            f'/testing2/{post.id}/',
-            {'text': 'comment'},
-            follow=True)
-        response = self.client.get(f'/testing2/{post.id}/')
-        self.assertContains(response, 'comment')
