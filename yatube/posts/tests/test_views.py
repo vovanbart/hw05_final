@@ -115,11 +115,6 @@ class PostPagesTests(TestCase):
     def test_comment_authorized_user(self):
         """ Оставлять комментарий может только авторизованный пользователь """
         comment_count = Comment.objects.count()
-        '''comment = Comment.objects.create(
-            text='Тестовый comment',
-            author=self.user,
-            post = self.post,
-        )'''
         form_data = {
             'text': 'Тестовый comment',
             'author': self.user,
