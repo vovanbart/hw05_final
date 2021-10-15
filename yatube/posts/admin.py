@@ -52,9 +52,6 @@ class FollowAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Post, PostAdmin)
-
 admin.site.register(Group, GroupAdmin)
-
 admin.site.register(Comment, CommentAdmin)
-
 admin.site.register(Follow, FollowAdmin)

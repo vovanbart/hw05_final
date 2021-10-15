@@ -1,87 +1,87 @@
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
-from posts.models import Group, Post
-
+from django.core.cache import cache
+from django.test import TestCase, Client
+from posts.models import Post, Group
+from http import HTTPStatus
 User = get_user_model()
 
 
-class PostURLTests(TestCase):
+class PostURLTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create(
-            username='auth'
-        )
+        cls.user = User.objects.create_user(username='auth')
         cls.group = Group.objects.create(
-            title='Тестовая группа',
-            slug='test_slug',
+            title='title',
+            slug='test-slug',
+            description='description',
         )
         cls.post = Post.objects.create(
-            text='Тестовый текст',
             author=cls.user,
-            group=cls.group
+            text='text',
         )
 
     def setUp(self):
         self.guest_client = Client()
-        self.user = PostURLTests.user
+        self.user = User.objects.create_user(username='HasNoName')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.author_client = Client()
+        self.author_client.force_login(PostURLTest.user)
+        cache.clear()
 
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {
             '/': 'posts/index.html',
-            '/group/test_slug/': 'posts/group_list.html',
-            '/profile/auth/': 'posts/profile.html',
-            '/posts/1/': 'posts/post_detail.html',
+            f'/group/{self.group.slug}/': 'posts/group_list.html',
+            f'/profile/{self.user}/': 'posts/profile.html',
+            f'/posts/{self.post.id}/': 'posts/post_detail.html',
+            f'/posts/{self.post.id}/edit/': 'posts/create_post.html',
             '/create/': 'posts/create_post.html',
-            '/posts/1/edit/': 'posts/create_post.html',
+            '/follow/': 'posts/follow.html',
         }
+        adress_list = ['/create/',
+                       '/follow/']
         for adress, template in templates_url_names.items():
-            authorized_templates = ['/create/', '/posts/1/edit/']
             with self.subTest(adress=adress):
-                if adress in authorized_templates:
+                if adress in adress_list:
                     response = self.authorized_client.get(adress)
-                    self.assertTemplateUsed(
-                        response,
-                        template,
-                        f'Адресс {adress} работает не правильно')
+                    self.assertTemplateUsed(response, template)
+                elif adress == f'/posts/{self.post.id}/edit/':
+                    response = self.author_client.get(adress)
+                    self.assertTemplateUsed(response, template)
                 else:
                     response = self.guest_client.get(adress)
-                    self.assertTemplateUsed(
-                        response,
-                        template,
-                        f'Адресс {adress} работает не правильно')
+                    self.assertTemplateUsed(response, template)
 
-    def test_url_exists_at_desired_location(self):
-        url = [
-            '/',
-            '/group/test_slug/',
-            '/profile/auth/',
-            '/posts/1/',
-            '/create/',
-            '/posts/1/edit/',
-        ]
-        for adress in url:
-            authorized_adress = ['/create/', '/posts/1/edit/']
+    def test_urls_exists_at_desired_location(self):
+        url_status = {
+            '/': HTTPStatus.OK,
+            f'/group/{self.group.slug}/': HTTPStatus.OK,
+            f'/profile/{self.user}/': HTTPStatus.OK,
+            f'/posts/{self.post.id}/': HTTPStatus.OK,
+            f'/posts/{self.post.id}/edit/': HTTPStatus.OK,
+            '/create/': HTTPStatus.OK,
+            '/unexisting_page/': HTTPStatus.NOT_FOUND,
+            f'/posts/{self.post.id}/comment': HTTPStatus.FOUND,
+            f'/profile/{self.user}/follow/': HTTPStatus.FOUND,
+            f'/profile/{self.user}/unfollow/': HTTPStatus.FOUND,
+            '/follow/': HTTPStatus.OK,
+        }
+        adress_list = ['/create/',
+                       f'/profile/{self.user}/unfollow/',
+                       f'/profile/{self.user}/follow/',
+                       f'/posts/{self.post.id}/comment/',
+                       '/follow/']
+        for adress, http_status in url_status.items():
             with self.subTest(adress=adress):
-                response = self.guest_client.get(adress)
-                if adress in authorized_adress:
-                    self.assertEqual(
-                        response.status_code,
-                        302,
-                        f'Адресс {adress} не доступен.')
+                if adress in adress_list:
+                    response = self.authorized_client.get(adress)
+                    self.assertEqual(response.status_code, http_status)
+                elif adress == f'/posts/{self.post.id}/edit/':
+                    response = self.author_client.get(adress)
+                    self.assertEqual(response.status_code, http_status)
                 else:
-                    self.assertEqual(
-                        response.status_code,
-                        200,
-                        f'Адресс {adress} не доступен.')
-
-    def test_edit_author_post(self):
-        author = PostURLTests.post.author
-        if author != self.user:
-            response = self.authorized_client.get(
-                '/posts/1/edit/',
-                follow=True)
-            self.assertRedirects(response, '/posts/1/')
+                    response = self.guest_client.get(adress)
+                    self.assertEqual(response.status_code, http_status)

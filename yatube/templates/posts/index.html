@@ -2,7 +2,6 @@
 {% load thumbnail %}
 {% load cache %}
 {% cache 20 index_page %}
-{% endcache %}
 {% load static %}
 {% block title %}
   Последние обновления на сайте    
@@ -34,3 +33,4 @@
   </div>
 {% include '../includes/paginator.html' %}
 {% endblock %}
+{% endcache %}

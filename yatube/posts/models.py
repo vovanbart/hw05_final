@@ -64,13 +64,17 @@ class Comment(models.Model):
         Post, null=True,
         blank=True,
         on_delete=models.CASCADE,
-        related_name='comments')
+        related_name='comments',
+        verbose_name='Пост комментария',
+        help_text='Пост комментария',)
     author = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.CASCADE,
-        related_name='comments')
+        related_name='comments',
+        verbose_name='Комментатор',
+        help_text='Комментатор')
     text = models.TextField(
         verbose_name='Комментарий',
         help_text='Введите комментарий'
@@ -92,7 +96,7 @@ class Follow(models.Model):
         related_name='following')
 
     class Meta:
-        constraints = UniqueConstraint(fields=['user', 'author'],
+        constraints = UniqueConstraint(fields=('user', 'author',),
                                        name='uniq_follow')
 
     def __str__(self):
