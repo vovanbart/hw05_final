@@ -25,27 +25,27 @@
         {% endif %}
         <article>
             {% for post in page_obj %}
-            <ul>
-                <li>
-                    Автор: {{ post.author.get_full_name }}
-                    <a href="{% url 'posts:profile' post.author.username%}">Все посты пользователя</a>
+            <div class="shadow-lg p-3 mb-5 bg-white rounded">
+                <ul>
+                <h3>{{ post.text|truncatechars:100 }}</h3>
+                <p class="text-muted">
+                    {{ post.pub_date|date:"d M Y" }}
                 </li>
-                <li>
-                    Дата публикации: {{ post.pub_date|date:"d M Y" }}
+                <p>
+                    <a href="{% url 'posts:profile' post.author.username%}">@{{ post.author.username }}</a>
                 </li>
-            </ul>
-            {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
+                </ul>
+                {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
                 <img class="card-img my-2" src="{{ im.url }}">
-            {% endthumbnail %}
-            <p>{{ post.text }}</p> 
-            <a class="btn btn-sm text-muted" href="{% url 'posts:post_edit' post.id %}" role="button">
-            Редактировать</a>
-            <a href="{% url 'posts:post_detail' post.id %}">Подробная информация</a>
-            <br>
-            {% if post.group %}  
-                <a href="{% url 'posts:group_list' post.group.slug %}">Все записи группы</a>
-            {% endif %}
-            {% if not forloop.last %}<hr>{% endif %}
+                {% endthumbnail %}
+                <p>{{ post.text|truncatechars:400 }}</p> 
+                {% if post.group %}    
+                    <a href="{% url 'posts:group_list' post.group.slug %}">#{{ post.group.title}} </a>
+                {% endif %}
+                <br>
+                <a class="text-muted" href="{% url 'posts:post_detail' post.id %}">Читать далее...</a> 
+                {% if not forloop.last %}<hr>{% endif %}
+            </div>
             {% endfor %}
             </article>
             {% include '../includes/paginator.html' %}
